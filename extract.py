@@ -87,9 +87,12 @@ def describe_error(error: Exception) -> str:
     return f"{type(error).__name__}: {error}"
 
 
-def run(cities: list[dict]) -> list[tuple[str, dict]]:
-    """Fetch and land every city. A failing city is reported and skipped."""
-    run_time = datetime.now(timezone.utc)
+def run(cities: list[dict], run_time: datetime | None = None) -> list[tuple[str, dict]]:
+    """Fetch and land every city. A failing city is reported and skipped.
+
+    All files from one run share one UTC timestamp, so they can be traced as a batch.
+    """
+    run_time = run_time or datetime.now(timezone.utc)
     results = []
     for city in cities:
         name = city["name"]
