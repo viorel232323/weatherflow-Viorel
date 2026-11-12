@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS weather_hourly (
 );
 """
 
-# INSERT OR REPLACE makes the load idempotent: a row whose (city, observed_at)
-# already exists is replaced by the newer one instead of failing or duplicating.
+
+# A Row that already exists is replaced by the newer one instead of failing or duplicating.
 INSERT_SQL = (
     f"INSERT OR REPLACE INTO weather_hourly ({', '.join(OUTPUT_COLUMNS)}) "
     f"VALUES ({', '.join('?' for _ in OUTPUT_COLUMNS)})"
