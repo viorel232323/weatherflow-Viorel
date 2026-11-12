@@ -14,22 +14,22 @@ flowchart LR
   end
 
   subgraph STREAM["Streaming path: weather-producer and weather-consumer containers"]
-    ING["E · scripts/weather_api.py<br/>calls the APIs for 5 cities"]
-    PROD["E · Kafka producer<br/>simple_producer.py, every 5 min"]
+    ING["E  scripts/weather_api.py<br/>calls the APIs for 5 cities"]
+    PROD["E  Kafka producer<br/>simple_producer.py, every 5 min"]
     TOPIC[("Kafka topic<br/>weather-raw-data")]
-    CONS["T · Kafka consumer<br/>simple_consumer.py<br/>adds °F, heat index, timestamp"]
+    CONS["T  Kafka consumer<br/>simple_consumer.py<br/>adds °F, heat index, timestamp"]
   end
 
   subgraph BATCH["Batch path: Airflow DAG weather_flow_pipeline, hourly"]
-    FETCH["E · fetch_weather_data task"]
-    PROCPY["T · process_weather_data.py<br/>pandas, not Spark"]
-    REP["L · generate_reports.py<br/>CSV, HTML, PNG reports"]
+    FETCH["E  fetch_weather_data task"]
+    PROCPY["T  process_weather_data.py<br/>pandas, not Spark"]
+    REP["L  generate_reports.py<br/>CSV, HTML, PNG reports"]
   end
 
-  RAW[("E · Raw zone<br/>data/raw/*.json")]
-  SPARK["T · Spark job<br/>spark/scripts/weather_processor.py<br/>batch, local[*]"]
-  PROC[("L · Processed zone<br/>data/processed/*.json, *.parquet")]
-  DASH["Serve · Dash/Flask dashboard<br/>dashboard/app.py, port 8051"]
+  RAW[("E  Raw zone<br/>data/raw/*.json")]
+  SPARK["T  Spark job<br/>spark/scripts/weather_processor.py<br/>batch, local[*]"]
+  PROC[("L  Processed zone<br/>data/processed/*.json, *.parquet")]
+  DASH["Serve  Dash/Flask dashboard<br/>dashboard/app.py, port 8051"]
   PG[("PostgreSQL<br/>Airflow metadata only")]
 
   WA --> ING
