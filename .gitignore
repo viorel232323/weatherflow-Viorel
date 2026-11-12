@@ -1,0 +1,20 @@
+# Python virtual environment and caches
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets (API keys go in .env, never in Git)
+.env
+
+# Data: raw and processed files stay on the machine, never in Git
+data/
+*.db
+
+# Jupyter autosave folders
+.ipynb_checkpoints/
+
+# Editor and OS clutter
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
