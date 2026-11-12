@@ -7,8 +7,8 @@
 | Source | Open-Meteo Forecast API, `https://api.open-meteo.com/v1/forecast` (docs: https://open-meteo.com/en/docs) |
 | Request | `hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,weather_code`, `past_days=1`, `forecast_days=1`, `timezone=Europe/London` |
 | Cities | London, Manchester, Birmingham, Edinburgh, Cardiff (coordinates from the Open-Meteo Geocoding API, stored in `extract.py`) |
-| Licence | Open-Meteo data is licensed under **CC BY 4.0**: free to use, including commercially, with attribution to Open-Meteo.com |
-| Refresh frequency | Week 1: each time `extract.py` or `etl_v1.py` is run (planned hourly from Week 3). Open-Meteo updates its data as new weather-model runs arrive, several times a day. |
+| Licence | Open-Meteo data is licensed under **CC BY 4.0**: reuse is allowed with attribution to Open-Meteo.com. The free API itself is for non-commercial use; commercial use needs an API subscription. |
+| Refresh frequency | Week 1: each time `extract.py` or `etl_v1.py` is run (planned hourly). Open-Meteo updates its data as new weather-model runs arrive, several times a day. |
 | Coverage per run | 48 hours per city (yesterday 00:00 to today 23:00, local time), so 5 × 48 = 240 rows per run |
 | **Grain** | **One row per city per hour** |
 | Natural key | `(city, time)` |
@@ -35,6 +35,26 @@ Units come from `hourly_units` in each response.
 
 The exploration notebook also adds `source_file` (text, the raw file a row came from) to trace duplicates.
 It is not part of the pipeline's output.
+
+## Loaded table: `weather_hourly` in `weather.db`
+
+Written by `etl_v1.py`. Same grain: one row per city per hour. Primary key `(city, observed_at)`.
+Column names carry their unit, so nobody has to guess whether a number is °C or °F, km/h or mph.
+
+| Column | SQLite type | Unit | Description | Example | Nullable? | Source column |
+|--------|-------------|------|-------------|---------|-----------|---------------|
+| city | TEXT | none | City name. Part of the primary key. | London | No | `city` |
+| observed_at | TEXT | Europe/London local time, `YYYY-MM-DDTHH:MM` | Hour the values are valid for. Part of the primary key. Includes forecast hours later than the run time. | 2026-11-11T00:00 | No | `time` |
+| temperature_c | REAL | °C | Air temperature 2 m above ground | 9.0 | Yes | `temperature_2m` |
+| feels_like_c | REAL | °C | Apparent ("feels like") temperature | 6.9 | Yes | `apparent_temperature` |
+| humidity_pct | INTEGER | % | Relative humidity 2 m above ground | 94 | Yes | `relative_humidity_2m` |
+| precipitation_mm | REAL | mm | Rain, showers and snow in the preceding hour | 0.1 | Yes | `precipitation` |
+| wind_speed_kmh | REAL | km/h | Wind speed 10 m above ground | 11.5 | Yes | `wind_speed_10m` |
+| weather_code | INTEGER | WMO code | Weather condition code | 51 | Yes | `weather_code` |
+| ingested_at_utc | TEXT | UTC, ISO 8601 `YYYY-MM-DDTHH:MM:SSZ` | When the pipeline run that last wrote this row started. It matches the timestamp in that run's raw file names, so each row can be traced to its raw file. | 2026-11-12T10:38:18Z | No | Added by `transform()` |
+
+`latitude` and `longitude` are not loaded in Week 1. They describe the model grid cell and are the
+same for every row of a city.
 
 ## Response fields not loaded
 
