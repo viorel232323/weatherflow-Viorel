@@ -2,16 +2,22 @@
 .venv/
 __pycache__/
 *.pyc
+.ipynb_checkpoints/
+
+# Package build files (created by pip install -e .)
+*.egg-info/
+build/
+dist/
 
 # Secrets (API keys go in .env, never in Git)
 .env
 
-# Data: raw and processed files stay on the machine, never in Git
+# Generated data and logs: stay on the machine, never in Git
 data/
 *.db
-
-# Jupyter autosave folders
-.ipynb_checkpoints/
+*.sqlite
+logs/
+*.log
 
 # Editor and OS clutter
 .vscode/
