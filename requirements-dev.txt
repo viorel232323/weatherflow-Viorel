@@ -1,0 +1,6 @@
+# Tools used while developing; the pipeline itself never imports them.
+-r requirements.txt
+jupyter
+matplotlib
+pytest>=8
+pytest-cov>=5
