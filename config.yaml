@@ -30,6 +30,12 @@ paths:
   quarantine_dir: data/quarantine
   database: data/weather.db
   log_file: logs/pipeline.log
+  schema: sql/schema.sql
 
 logging:
   level: INFO
+
+
+dim_date:                  # every date in this range gets a row in dim_date
+  start: 2025-01-01
+  end: 2027-12-31

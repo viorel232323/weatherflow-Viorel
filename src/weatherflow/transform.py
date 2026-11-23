@@ -85,13 +85,14 @@ def deduplicate(df: pd.DataFrame) -> pd.DataFrame:
     """Keep one row per city and hour: the most recently ingested one."""
     return (
         df.sort_values("ingested_at_utc")
-        .drop_duplicates(subset=["city", "observed_at_utc"], keep="last")
+        .drop_duplicates(subset=["city", "observed_at_utc","source"], keep="last")
         .sort_values(["city", "observed_at_utc"])
         .reset_index(drop=True)
     )
 
 
-def transform(raw: list[tuple[str, dict]], codes: pd.DataFrame, run_time: datetime | None = None) -> pd.DataFrame:
+def transform(raw: list[tuple[str, dict]], codes: pd.DataFrame, run_time: datetime | None = None,
+              source: str = "open_meteo_forecast") -> pd.DataFrame:
     """Run every transform step in order and return the clean table."""
     run_time = run_time or datetime.now(timezone.utc)
     if not raw:
@@ -100,6 +101,7 @@ def transform(raw: list[tuple[str, dict]], codes: pd.DataFrame, run_time: dateti
     df = standardise_columns(df)
     df = add_weather_description(df, codes)
     df = add_derived_metrics(df)
+    df["source"] = source
     df["ingested_at_utc"] = pd.Timestamp(run_time)
     df = deduplicate(df)
     logger.info("Transform finished: %d rows, %d cities", len(df), df["city"].nunique())
