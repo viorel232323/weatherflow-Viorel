@@ -18,6 +18,7 @@ data/
 *.sqlite
 logs/
 *.log
+docs/dq_reports/
 
 # Editor and OS clutter
 .vscode/

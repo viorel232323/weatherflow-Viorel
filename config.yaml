@@ -31,6 +31,7 @@ paths:
   database: data/weather.db
   log_file: logs/pipeline.log
   schema: sql/schema.sql
+  dq_report_dir: docs/dq_reports
 
 logging:
   level: INFO
@@ -39,3 +40,12 @@ logging:
 dim_date:                  # every date in this range gets a row in dim_date
   start: 2025-01-01
   end: 2027-12-31
+
+
+data_quality:
+  temperature_c_min: -30
+  temperature_c_max: 45
+  humidity_pct_min: 0
+  humidity_pct_max: 100
+  max_feels_like_gap_c: 15      # warn if feels-like differs from temperature by more than this
+  max_hours_since_latest: 3     # warn if the newest past hour is older than this
