@@ -73,9 +73,9 @@ def build_dim_date(start: date, end: date) -> pd.DataFrame:
         "month": days.month,
         "month_name": days.strftime("%B"),
         "day": days.day,
-        "day_of_week": days.dayofweek + 1,  # pandas counts Monday as 0
+        "day_of_week": days.day_of_week + 1,  # pandas counts Monday as 0
         "day_name": days.strftime("%A"),
-        "is_weekend": (days.dayofweek >= 5).astype(int),
+        "is_weekend": (days.day_of_week >= 5).astype(int),
     })
 
 
