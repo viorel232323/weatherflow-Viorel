@@ -12,6 +12,7 @@ from contextlib import closing
 from pathlib import Path
 
 import pandas as pd
+from weatherflow.config import load_config
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -39,10 +40,10 @@ def split_statements(sql_text: str) -> list[tuple[str, str]]:
 
 
 def main() -> None:
-    sql_file = Path(sys.argv[1]) if len(sys.argv) > 1 else PROJECT_ROOT / "sql" / "week1_queries.sql"
-    db_path = PROJECT_ROOT / "weather.db"
+    sql_file = Path(sys.argv[1]) if len(sys.argv) > 1 else PROJECT_ROOT / "sql" / "analysis_queries.sql"
+    db_path = load_config()["paths"]["database"]
     if not db_path.exists():
-        sys.exit("weather.db not found. Run `python etl_v1.py` first.")
+        sys.exit("Database not found. Run `python -m weatherflow run` first.")
     with closing(sqlite3.connect(db_path)) as conn:
         for comment, statement in split_statements(sql_file.read_text(encoding="utf-8")):
             print("=" * 100)
