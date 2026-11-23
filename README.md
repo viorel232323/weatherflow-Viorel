@@ -11,91 +11,33 @@ builds that pipeline step by step. One command pulls live weather for the
 five cities from the free Open-Meteo API, saves the raw responses unchanged, cleans
 them, and loads them into a SQLite database that can be queried with SQL.
 
-## How to set up
-
-You need Python 3.11 or newer and Git.
-
-1. Clone the repository and go into it:
+## Install the dependencies and the package:
 
    ```sh
-   git clone https://github.com/viorel232323/weatherflow-Viorel.git
-   cd weatherflow-viorel
+   pip install -r requirements-dev.txt
+   pip install -e .        # required: makes the src/ package importable
    ```
-
-2. Create and activate a virtual environment:
-
-   ```sh
-   python -m venv .venv
-   # Windows PowerShell:  .venv\Scripts\Activate.ps1
-   # Mac/Linux:           source .venv/bin/activate
-   ```
-
-   If PowerShell blocks the activate script, run
-   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use Git Bash.
-
-3. Install the pinned dependencies:
-
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-No API key is needed: Open-Meteo is free for non-commercial use.
 
 ## How to run the pipeline
 
-With the virtual environment active, from the repo root:
+With the virtual environment active, from any folder:
 
 ```sh
-python etl_v1.py
+python -m weatherflow run
 ```
 
-This one command:
+This one command extracts the last day plus the next day of hourly weather (in UTC) for the five
+cities in `config.yaml`, saves each response unchanged to `data/raw/<YYYY-MM-DD>/`, cleans it,
+and loads it into `data/weather.db`. Every step is logged to the screen and to `logs/pipeline.log`.
 
-1. **Extracts:** calls Open-Meteo for each city  and saves each
-   response, unchanged, to `data/raw/<YYYY-MM-DD>/<city>_<YYYYMMDDTHHMMSS>.json`
-2. **Transforms:** flattens the JSON into one row per city per hour, converts `time` to a datetime,
-   renames columns to `snake_case` with units, adds `ingested_at_utc` and drops duplicates.
-3. **Loads:** writes the rows into the table `weather_hourly` in `weather.db` (SQLite), using
-   `INSERT OR REPLACE` on the primary key `(city, observed_at)`.
+- **Settings** (API URLs, cities, paths, retries) live in `config.yaml`, not in the code.
+- **Retries:** timeouts, connection errors and 5xx answers are retried after 1 s, 2 s and 4 s;
+  4xx answers are not retried.
+- **Exit code:** `0` when every city loads, `1` if any city fails, so a scheduler can see failures.
+- **Re-running is safe:** a row for an existing `(city, observed_at_utc)` replaces the old one,
+  so running twice gives the same row count.
 
-Example output:
-
-```
-WeatherFlow ETL v1  run at 2026-11-12 10:38:18 UTC
-[1/3] Extract
-  OK      London      48 hourly records -> data\raw\2026-11-12\london_20261112T103818.json
-  OK      Manchester  48 hourly records -> data\raw\2026-11-12\manchester_20261112T103818.json
-  OK      Birmingham  48 hourly records -> data\raw\2026-11-12\birmingham_20261112T103818.json
-  OK      Edinburgh   48 hourly records -> data\raw\2026-11-12\edinburgh_20261112T103818.json
-  OK      Cardiff     48 hourly records -> data\raw\2026-11-12\cardiff_20261112T103818.json
-Extract finished: 5 of 5 cities landed.
-[2/3] Transform
-  240 rows after cleaning (5 cities)
-[3/3] Load
-Loaded 240 rows into weather.db, table weather_hourly
-
-Rows per city now in the table:
-      city  rows       first_hour        last_hour
-Birmingham    48 2026-11-11T00:00 2026-11-12T23:00
-   Cardiff    48 2026-11-11T00:00 2026-11-12T23:00
- Edinburgh    48 2026-11-11T00:00 2026-11-12T23:00
-    London    48 2026-11-11T00:00 2026-11-12T23:00
-Manchester    48 2026-11-11T00:00 2026-11-12T23:00
-
-```
-
-Options:
-
-```sh
-python etl_v1.py --cities London Cardiff   # only some cities
-python etl_v1.py --db test.db              # a different database file
-python extract.py                          # extract only: land raw JSON, no database
-```
-
-**Re-running is safe.** Running the pipeline twice in a row gives the same row count, because a row
-for an existing `(city, observed_at)` replaces the old one. The count only grows when a new day comes
-into the 48-hour window, by 24 rows per city. If one city fails (for example a network error), the
-others are still extracted and loaded, and the error is printed with the API's reason.
+`etl_v1.py` is the Week 1 version, kept for history.
 
 ## How to query the data
 
