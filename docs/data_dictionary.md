@@ -61,3 +61,28 @@ same for every row of a city.
 `generationtime_ms`, `utc_offset_seconds`, `timezone`, `timezone_abbreviation`, `elevation` (metres) and
 `hourly_units` are kept in the raw files but not copied into the table. `timezone` and `utc_offset_seconds`
 are the only record of which time zone `time` is in, which is one reason the raw files are kept.
+
+## Processed table: `data/processed/weather_hourly/`
+
+One row per city per hour. All times are stored in UTC; London time is derived from UTC.
+
+| Column | Type | Unit | Description / rule |
+|---|---|---|---|
+| `city` | text | | City name from `config.yaml` |
+| `observed_at_utc` | timestamp (UTC) | | The hour the reading is for; the main time key |
+| `observed_at_local` | timestamp (Europe/London) | | The same moment in UK time (GMT in winter, BST in summer) |
+| `temperature_c` | float | °C | Air temperature at 2 m |
+| `feels_like_c` | float | °C | Apparent ("feels like") temperature |
+| `humidity_pct` | integer | % | Relative humidity at 2 m |
+| `precipitation_mm` | float | mm | Rain plus snow in the hour |
+| `wind_speed_kmh` | float | km/h | Wind speed at 10 m |
+| `weather_code` | integer | | WMO weather code from the API |
+| `is_day` | integer | 0/1 | The API's daylight flag |
+| `weather_description` | text | | From `reference/wmo_codes.csv`; `unknown` if the code is not listed |
+| `weather_category` | text | | `clear`, `cloudy`, `fog`, `drizzle`, `rain`, `snow`, `storm` or `unknown` |
+| `temperature_f` | float | °F | `temperature_c × 9/5 + 32` |
+| `wind_speed_ms` | float | m/s | `wind_speed_kmh ÷ 3.6`, rounded to 2 decimals |
+| `beaufort_scale` | integer | 0–12 | WMO lower bounds in m/s: 1 from 0.3, 2 from 1.6, 3 from 3.4, 4 from 5.5, 5 from 8.0, 6 from 10.8, 7 from 13.9, 8 from 17.2, 9 from 20.8, 10 from 24.5, 11 from 28.5, 12 from 32.7. A value exactly on a bound gets the higher force |
+| `is_daylight` | boolean | | True when `is_day = 1` |
+| `outdoor_work_risk` | text | | Checked in order. **high:** Beaufort ≥ 7, or category `storm`/`snow`, or precipitation ≥ 4 mm. **medium:** Beaufort ≥ 5, or precipitation ≥ 1 mm, or temperature ≤ 0 °C. Otherwise **low** |
+| `ingested_at_utc` | timestamp (UTC) | | When the pipeline ran |

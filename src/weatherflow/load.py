@@ -2,6 +2,7 @@
 import logging
 import sqlite3
 from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -68,3 +69,13 @@ def count_rows(db_path: Path) -> int:
     """Total rows in weather_hourly, used to prove that re-runs add no duplicates."""
     with closing(sqlite3.connect(db_path)) as conn:
         return conn.execute("SELECT COUNT(*) FROM weather_hourly").fetchone()[0]
+
+
+def write_parquet(df: pd.DataFrame, processed_dir: Path, run_time: datetime) -> Path:
+    """Save df as processed_dir/weather_hourly/run_date=<YYYY-MM-DD>/part-<timestamp>.parquet."""
+    folder = processed_dir / "weather_hourly" / f"run_date={run_time:%Y-%m-%d}"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"part-{run_time:%Y%m%dT%H%M%S}.parquet"
+    df.to_parquet(path, index=False)
+    logger.info("Wrote %d rows to %s", len(df), path.relative_to(processed_dir))
+    return path
