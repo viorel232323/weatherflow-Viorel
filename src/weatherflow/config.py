@@ -7,10 +7,10 @@ import yaml
 # This file is src/weatherflow/config.py, so 2 folders up is the project root.
 CONFIG_FILE = Path(__file__).resolve().parents[2] / "config.yaml"
 
-REQUIRED_SECTIONS = ["api", "cities", "paths", "dim_date"]
+REQUIRED_SECTIONS = ["api", "cities", "paths", "dim_date", "data_quality"]
 REQUIRED_API_KEYS = ["forecast_url", "archive_url", "timeout_seconds", "max_retries",
                      "past_days", "forecast_days", "timezone", "hourly_variables"]
-REQUIRED_PATH_KEYS = ["raw_dir", "processed_dir", "quarantine_dir", "database", "log_file", "schema"]
+REQUIRED_PATH_KEYS = ["raw_dir", "processed_dir", "quarantine_dir", "database", "log_file", "schema", "dq_report_dir"]
 REQUIRED_CITY_KEYS = ["name", "country", "latitude", "longitude"]
 
 
