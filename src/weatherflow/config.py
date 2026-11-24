@@ -9,7 +9,8 @@ CONFIG_FILE = Path(__file__).resolve().parents[2] / "config.yaml"
 
 REQUIRED_SECTIONS = ["api", "cities", "paths", "dim_date", "data_quality"]
 REQUIRED_API_KEYS = ["forecast_url", "archive_url", "timeout_seconds", "max_retries",
-                     "past_days", "forecast_days", "timezone", "hourly_variables"]
+                     "past_days", "forecast_days", "timezone", "hourly_variables",
+                     "overlap_hours", "archive_lag_days", "backfill_chunk_days", "request_pause_seconds"]
 REQUIRED_PATH_KEYS = ["raw_dir", "processed_dir", "quarantine_dir", "database", "log_file", "schema", "dq_report_dir"]
 REQUIRED_CITY_KEYS = ["name", "country", "latitude", "longitude"]
 
