@@ -85,4 +85,5 @@ One row per city per hour. All times are stored in UTC; London time is derived f
 | `beaufort_scale` | integer | 0–12 | WMO lower bounds in m/s: 1 from 0.3, 2 from 1.6, 3 from 3.4, 4 from 5.5, 5 from 8.0, 6 from 10.8, 7 from 13.9, 8 from 17.2, 9 from 20.8, 10 from 24.5, 11 from 28.5, 12 from 32.7. A value exactly on a bound gets the higher force |
 | `is_daylight` | boolean | | True when `is_day = 1` |
 | `outdoor_work_risk` | text | | Checked in order. **high:** Beaufort ≥ 7, or category `storm`/`snow`, or precipitation ≥ 4 mm. **medium:** Beaufort ≥ 5, or precipitation ≥ 1 mm, or temperature ≤ 0 °C. Otherwise **low** |
+| `source` | text | | `open_meteo_forecast` (from `run`) or `open_meteo_archive` (from `backfill`); part of the row's key |
 | `ingested_at_utc` | timestamp (UTC) | | When the pipeline ran |
