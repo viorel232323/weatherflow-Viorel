@@ -42,6 +42,14 @@ INSERT_DATE_SQL = """
     ON CONFLICT (date_id) DO NOTHING
 """
 
+COUNT_FACTS_SQL = "SELECT COUNT(*) FROM fact_weather_hourly"
+WATERMARK_SQL = """
+    SELECT MAX(f.observed_at_utc)
+    FROM fact_weather_hourly AS f
+    JOIN dim_city AS c ON c.city_id = f.city_id
+    WHERE c.city_name = ? AND f.source = ? AND f.observed_at_utc <= ?
+"""
+
 
 def to_sql_value(value: Any) -> Any:
     """Convert a pandas/numpy value to a plain Python value that SQLite can store."""
@@ -108,8 +116,10 @@ def load(df: pd.DataFrame, config: dict[str, Any]) -> int:
             conn.executemany(INSERT_DATE_SQL, to_rows(dim_date))
             city_ids = dict(conn.execute("SELECT city_name, city_id FROM dim_city").fetchall())
             rows = build_fact_rows(df, city_ids)
+            before = conn.execute(COUNT_FACTS_SQL).fetchone()[0]
             conn.executemany(UPSERT_FACT_SQL, rows)
-    logger.info("Loaded %d fact rows into %s", len(rows), db_path.name)
+            new = conn.execute(COUNT_FACTS_SQL).fetchone()[0] - before
+    logger.info("Loaded %d fact rows into %s: %d new, %d updated", len(rows), db_path.name, new, len(rows) - new)
     return len(rows)
 
 
@@ -117,6 +127,19 @@ def count_rows(db_path: Path) -> int:
     """Total rows in fact_weather_hourly, used to prove that re-runs add no duplicates."""
     with closing(sqlite3.connect(db_path)) as conn:
         return conn.execute("SELECT COUNT(*) FROM fact_weather_hourly").fetchone()[0]
+
+
+def read_watermark(db_path: Path, city_name: str, source: str, now: datetime) -> datetime | None:
+    """The latest hour already loaded for this city and source, counting only hours up to now.
+
+    Forecast hours after now are ignored, so the next run fetches and refreshes them.
+    Returns None if nothing is loaded yet.
+    """
+    if not db_path.exists():
+        return None
+    with closing(sqlite3.connect(db_path)) as conn:
+        latest = conn.execute(WATERMARK_SQL, (city_name, source, now.isoformat(timespec="seconds"))).fetchone()[0]
+    return datetime.fromisoformat(latest) if latest else None
 
 
 def write_parquet(df: pd.DataFrame, processed_dir: Path, run_time: datetime) -> Path:
