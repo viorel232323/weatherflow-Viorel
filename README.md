@@ -23,21 +23,62 @@ them, and loads them into a SQLite database that can be queried with SQL.
 With the virtual environment active, from any folder:
 
 ```sh
-python -m weatherflow run
+python -m weatherflow run                     # incremental: only the new hours, plus the forecast
+python -m weatherflow backfill --days 30      # history: the 30 days ending 5 days ago
+python -m weatherflow backfill --start-date 2026-10-01 --end-date 2026-10-07
 ```
 
-This one command extracts the last day plus the next day of hourly weather (in UTC) for the five
-cities in `config.yaml`, saves each response unchanged to `data/raw/<YYYY-MM-DD>/`, cleans it,
-and loads it into `data/weather.db`. Every step is logged to the screen and to `logs/pipeline.log`.
+**`run` (incremental).** For each city it reads a **watermark**: the latest hour already loaded that
+has actually happened (`observed_at_utc <= now`, so loaded forecast hours don't count). It then asks the
+forecast API for the hours from **2 hours before** the earliest watermark up to 23:00 today, so new hours
+are added and the forecast is refreshed. The 2-hour overlap catches late corrections, and the upsert makes
+the overlap harmless. With an empty database it falls back to `past_days: 1` (yesterday 00:00 onwards).
 
-- **Settings** (API URLs, cities, paths, retries) live in `config.yaml`, not in the code.
+**`backfill` (history).** Uses the Open-Meteo **archive** API, which runs about 5 days behind real time,
+so by default it ends 5 days ago. It asks for 7 days per request per city (with a 1 s pause), saves every
+chunk unchanged, and loads the rows with `source = open_meteo_archive`.
+
+Both commands use the **same** transform -> validate -> load code. Every response is saved unchanged to
+`data/raw/<YYYY-MM-DD>/`, rows go to `data/weather.db`, and every step is logged to the screen and to
+`logs/pipeline.log`, including the requested hours and how many rows were **new vs updated**.
+
+- **Settings** (API URLs, cities, paths, retries, overlap, chunk size) live in `config.yaml`, not in the code.
 - **Retries:** timeouts, connection errors and 5xx answers are retried after 1 s, 2 s and 4 s;
   4xx answers are not retried.
-- **Exit code:** `0` when every city loads, `1` if any city fails, so a scheduler can see failures.
-- **Re-running is safe:** a row for an existing `(city, observed_at_utc)` replaces the old one,
-  so running twice gives the same row count.
+- **Data quality:** every city must have every requested hour (`days × 24` for a backfill), or nothing is loaded.
+- **Exit code:** `0` on success, `1` if a city or a blocking check fails, so a scheduler can see failures.
+- **Re-running is safe:** rows are upserted on `(city, observed_at_utc, source)`, so a re-run updates rows
+  instead of adding them.
 
-`etl_v1.py` is the Week 1 version, kept for history.
+| Evidence (24 Nov 2026) | Result |
+|---|---|
+| `backfill --days 30`, run twice | 3,600 rows (30 days × 24 h × 5 cities): 3,600 new, then 0 new and 3,600 updated |
+| `run` after the previous day's load | requested 23 Nov 21:00 to 24 Nov 23:00 (27 h per city): 120 new, 15 updated |
+| `run` again a minute later | requested 24 Nov 10:00 to 23:00 (14 h per city): 0 new, 70 updated |
+
+`etl_v1.py` kept for history.
+
+## How to run the tests
+
+```sh
+python -m pytest                                        # 99 tests, about 3 seconds
+python -m pytest --cov=src --cov-report=term-missing    # the same, plus coverage
+```
+
+The tests never call the real API and never touch `data/`. The API is faked with `monkeypatch`,
+and every file and database is written to a temporary folder (`tmp_path`).
+
+| File | What it proves |
+|---|---|
+| `tests/test_transform.py` | unit conversions, the WMO lookup, Beaufort and outdoor-work-risk boundaries |
+| `tests/test_validate.py` | bad rows are quarantined with a reason; duplicates or missing hours block the load |
+| `tests/test_extract.py` | 5xx and timeouts are retried after 1 s, 2 s, 4 s; 4xx is not; one failing city doesn't stop the others |
+| `tests/test_load.py` | loading twice keeps 240 rows; a failed load saves nothing (one transaction) |
+| `tests/test_pipeline.py` | end to end: a good run returns 0 and loads 240 rows; bad data returns 1 and loads nothing |
+| `tests/test_config_and_cli.py` | a broken `config.yaml` names the missing key; the command returns the pipeline's exit code | 
+| `tests/test_incremental_and_backfill.py` | the watermark ignores future forecast hours; the window starts 2 h earlier; a 30-day backfill loads 3,600 rows twice with no change |
+
+**Coverage:** 99% of `src/weatherflow` (99 tests).
 
 ## How to query the data
 
